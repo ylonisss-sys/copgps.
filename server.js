@@ -7,9 +7,11 @@ const TTL = 10000;                                    // ms without updates -> p
 const rooms = new Map();                              // room -> Map(nick -> {x,y,z,v,hp,t})
 
 const clean = (s, n = 32) => String(s || '').replace(/[^\w.\-]/g, '').slice(0, n);
+const cleanTag = (s) => String(s || '').replace(/[^A-Za-z0-9_.\-]/g, '').slice(0, 12);
+const cleanAlert = (s) => String(s || '').replace(/[^A-Za-z0-9 _.!?\-]/g, '').slice(0, 20);
 const num = (v) => (Number.isFinite(v) && Math.abs(v) < 100000 ? v : null);
 
-http.createServer((req, res) => {
+const server = http.createServer((req, res) => {
   if (req.method === 'GET' && (req.url === '/' || req.url === '/ping')) {
     res.writeHead(200); return res.end('ok');
   }
@@ -33,17 +35,27 @@ http.createServer((req, res) => {
     } else {
       const x = num(d.x), y = num(d.y), z = num(d.z);
       if (x === null || y === null || z === null) { res.writeHead(400); return res.end(); }
-      players.set(nick, { x, y, z, v: d.v ? 1 : 0, hp: num(d.hp) || 0, t: now });
+      players.set(nick, { x, y, z, v: d.v ? 1 : 0, hp: num(d.hp) || 0, tag: cleanTag(d.tag), al: cleanAlert(d.al), t: now });
     }
 
     const out = [];
     for (const [n, p] of players) {
       if (now - p.t > TTL) { players.delete(n); continue; }
-      if (n !== nick) out.push({ n, x: p.x, y: p.y, z: p.z, v: p.v, hp: p.hp });
+      if (n !== nick) out.push({ n, x: p.x, y: p.y, z: p.z, v: p.v, hp: p.hp, tag: p.tag, al: p.al });
     }
     if (players.size === 0) rooms.delete(room);
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(out));
   });
-}).listen(process.env.PORT || 8080, () => console.log('CopGPS server started'));
+});
+
+// Keep connections open longer than the proxy in front of the server (fixes sporadic 502/520 errors)
+server.keepAliveTimeout = 120 * 1000;
+server.headersTimeout = 125 * 1000;
+server.on('clientError', (err, socket) => {
+  try { socket.end('HTTP/1.1 400 Bad Request\r\n\r\n'); } catch (e) {}
+});
+process.on('uncaughtException', (e) => console.error('error:', e));
+
+server.listen(process.env.PORT || 8080, () => console.log('CopGPS server started'));
