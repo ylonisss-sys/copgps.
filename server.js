@@ -11,6 +11,7 @@ const cleanTag = (s) => String(s || '').replace(/[^A-Za-z0-9_.\-]/g, '').slice(0
 const cleanLv = (s) => (s === 'n' ? 'n' : 'e');
 const cleanSt = (s) => (s === 'g' || s === 'y' || s === 'r' ? s : '');
 const cleanIa = (v) => (Number.isFinite(v) && v >= 0 && v < 256 ? Math.floor(v) : 0);
+const cleanInt = (v, max) => (Number.isFinite(v) && v >= 0 && v <= max ? Math.floor(v) : 0);
 const cleanAlert = (s) => String(s || '').replace(/[^A-Za-z0-9 _.!?\-]/g, '').slice(0, 20);
 const num = (v) => (Number.isFinite(v) && Math.abs(v) < 100000 ? v : null);
 
@@ -38,13 +39,13 @@ const server = http.createServer((req, res) => {
     } else {
       const x = num(d.x), y = num(d.y), z = num(d.z);
       if (x === null || y === null || z === null) { res.writeHead(400); return res.end(); }
-      players.set(nick, { x, y, z, v: d.v ? 1 : 0, hp: num(d.hp) || 0, tag: cleanTag(d.tag), al: cleanAlert(d.al), lv: cleanLv(d.lv), st: cleanSt(d.st), ia: cleanIa(d.ia), t: now });
+      players.set(nick, { x, y, z, v: d.v ? 1 : 0, hp: num(d.hp) || 0, tag: cleanTag(d.tag), al: cleanAlert(d.al), lv: cleanLv(d.lv), st: cleanSt(d.st), ia: cleanIa(d.ia), vm: cleanInt(d.vm, 65535), vid: cleanInt(d.vid, 2100), sd: d.sd === 0 ? 0 : 1, t: now });
     }
 
     const out = [];
     for (const [n, p] of players) {
       if (now - p.t > TTL) { players.delete(n); continue; }
-      if (n !== nick) out.push({ n, x: p.x, y: p.y, z: p.z, v: p.v, hp: p.hp, tag: p.tag, al: p.al, lv: p.lv, st: p.st, ia: p.ia });
+      if (n !== nick) out.push({ n, x: p.x, y: p.y, z: p.z, v: p.v, hp: p.hp, tag: p.tag, al: p.al, lv: p.lv, st: p.st, ia: p.ia, vm: p.vm, vid: p.vid, sd: p.sd });
     }
     if (players.size === 0) rooms.delete(room);
 
