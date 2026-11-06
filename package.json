@@ -1,0 +1,5 @@
+{
+  "name": "copgps",
+  "version": "1.0.0",
+  "main": "api/update.js"
+}
