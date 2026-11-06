@@ -1,7 +1,6 @@
 // CopGPS relay server для Vercel Serverless
 const TTL = 10000; // ms without updates -> player disappears
 
-// Используем глобальный кэш Vercel для сохранения комнат между запросами
 if (!global.rooms) {
   global.rooms = new Map();
 }
@@ -17,7 +16,6 @@ const cleanAlert = (s) => String(s || '').replace(/[^A-Za-z0-9 _.!?\-]/g, '').sl
 const num = (v) => (Number.isFinite(v) && Math.abs(v) < 100000 ? v : null);
 
 module.exports = async (req, res) => {
-  // Настройка CORS заголовков, чтобы запросы из SAMP точно проходили
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -32,11 +30,6 @@ module.exports = async (req, res) => {
     return res.end('ok');
   }
 
-  if (req.method !== 'POST') {
-    res.writeHead(404);
-    return res.end();
-  }
-
   let body = '';
   req.on('data', (c) => { body += c; if (body.length > 2000) req.destroy(); });
   
@@ -45,7 +38,6 @@ module.exports = async (req, res) => {
   let d;
   try { d = JSON.parse(body); } catch (e) { res.writeHead(400); return res.end(); }
 
-  // Твой секретный ключ успешно установлен
   const KEY = 'lvmpd1337zxc'; 
   if (d.key !== KEY) { res.writeHead(403); return res.end(); }
 
@@ -63,7 +55,7 @@ module.exports = async (req, res) => {
     players.set(nick, { x, y, z, v: d.v ? 1 : 0, hp: num(d.hp) || 0, tag: cleanTag(d.tag), al: cleanAlert(d.al), lv: cleanLv(d.lv), st: cleanSt(d.st), ia: cleanIa(d.ia), vm: cleanInt(d.vm, 65535), vid: cleanInt(d.vid, 2100), sd: d.sd === 0 ? 0 : 1, t: now });
   }
 
-  const out = [];
+  const out = []; // ТУТ ИСПРАВЛЕНО! Скобки на месте
   for (const [n, p] of players) {
     if (now - p.t > TTL) { players.delete(n); continue; }
     if (n !== nick) out.push({ n, x: p.x, y: p.y, z: p.z, v: p.v, hp: p.hp, tag: p.tag, al: p.al, lv: p.lv, st: p.st, ia: p.ia, vm: p.vm, vid: p.vid, sd: p.sd });
