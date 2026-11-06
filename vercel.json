@@ -1,0 +1,8 @@
+{
+  "version": 2,
+  "routes": [
+    { "src": "/api/update", "dest": "/api/update.js" },
+    { "src": "/api/index", "dest": "/api/update.js" },
+    { "src": "/(.*)", "dest": "/api/update.js" }
+  ]
+}
